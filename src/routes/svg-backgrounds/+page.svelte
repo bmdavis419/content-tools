@@ -3,6 +3,7 @@
   import { Palette, Upload, Layers } from "@lucide/svelte";
   import { SvgBgState } from "./svgBgState.svelte";
   import { displaySvgD3 } from "$lib/svg/displaySvgD3";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
 
   let svgDisplay: HTMLDivElement;
   let fileInput: HTMLInputElement;
@@ -13,6 +14,22 @@
 
   $effect(() => {
     setupSvg(svgDisplay);
+  });
+
+  $effect(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent((event) => {
+      if (event.payload.type === "over") {
+        console.log("User hovering", event.payload.position);
+      } else if (event.payload.type === "drop") {
+        console.log("User dropped", event.payload.paths);
+      } else {
+        console.log("File drop cancelled");
+      }
+    });
+
+    return () => {
+      unlisten.then((unlisten) => unlisten());
+    };
   });
 
   // Upload handling functions
@@ -38,6 +55,7 @@
   }
 
   function handleDragOver(event: DragEvent) {
+    console.log("drag over");
     event.preventDefault();
   }
 
