@@ -1,28 +1,117 @@
 <script lang="ts">
-  import Button from "../../lib/components/ui/button/button.svelte";
-  import { Palette, Upload, Layers } from "@lucide/svelte";
-  import { SvgBgState } from "./svgBgState.svelte";
+  import { Upload, Layers } from "@lucide/svelte";
   import { displaySvgD3 } from "$lib/svg/displaySvgD3";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
 
   let svgDisplay: HTMLDivElement;
-  let fileInput: HTMLInputElement;
+  let isDragHovering = $state(false);
+
+  let bgColorHex = $state<string>("#000000");
+  let borderRadius = $state<number>(100);
+  let imageWidth = $state<number>(75);
+  let svgElement = $state<SVGElement | null>(null);
 
   const { setupSvg, updateSvg, setInnerSvg } = displaySvgD3();
 
-  const svgBgState = new SvgBgState();
+  const parseSvgContent = (svgContent: string) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgContent, "image/svg+xml");
+    return doc.documentElement as unknown as SVGElement;
+  };
 
   $effect(() => {
     setupSvg(svgDisplay);
   });
 
   $effect(() => {
+    if (svgElement) {
+      setInnerSvg({ svgElement: svgElement, imageWidth: imageWidth });
+    }
+  });
+
+  // paste in svg
+  $effect(() => {
+    const handlePaste = async (event: ClipboardEvent) => {
+      const clipboardData = event.clipboardData;
+      if (!clipboardData) return;
+
+      // First try to get SVG directly
+      if (clipboardData.types.includes("image/svg+xml")) {
+        try {
+          const svgData = clipboardData.getData("image/svg+xml");
+          if (svgData) {
+            svgElement = parseSvgContent(svgData);
+            return;
+          }
+        } catch (error) {
+          console.error("Error getting SVG data:", error);
+        }
+      }
+
+      // Try to get SVG from clipboard items
+      const items = clipboardData.items;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+
+        // Check for SVG file or image
+        if (item.type === "image/svg+xml") {
+          const blob = item.getAsFile();
+          if (blob) {
+            // Parse SVG content
+            const text = await blob.text();
+            svgElement = parseSvgContent(text);
+            return;
+          }
+        }
+      }
+
+      // Check for SVG text content
+      const text = clipboardData.getData("text/plain");
+      if (text) {
+        const trimmedText = text.trim();
+
+        if (trimmedText.startsWith("<svg") && trimmedText.includes("</svg>")) {
+          svgElement = parseSvgContent(text);
+          return;
+        }
+
+        // Check if the text is a URL to an SVG file
+        if (trimmedText.match(/^https?:\/\/.*\.svg$/i)) {
+          try {
+            const response = await fetch(trimmedText);
+            if (response.ok) {
+              const svgText = await response.text();
+              if (svgText.trim().startsWith("<svg")) {
+                svgElement = parseSvgContent(svgText);
+                return;
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching SVG from URL:", error);
+          }
+        }
+      }
+    };
+
+    document.addEventListener("paste", handlePaste);
+
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  });
+
+  // drag and drop
+  $effect(() => {
     const unlisten = getCurrentWebview().onDragDropEvent((event) => {
       if (event.payload.type === "over") {
+        isDragHovering = true;
         console.log("User hovering", event.payload.position);
       } else if (event.payload.type === "drop") {
+        isDragHovering = false;
         console.log("User dropped", event.payload.paths);
       } else {
+        isDragHovering = false;
         console.log("File drop cancelled");
       }
     });
@@ -31,54 +120,24 @@
       unlisten.then((unlisten) => unlisten());
     };
   });
-
-  // Upload handling functions
-  function handleUploadClick() {
-    fileInput.click();
-  }
-
-  function handleFileSelect(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (file) {
-      handleFile(file);
-    }
-  }
-
-  function handleDrop(event: DragEvent) {
-    event.preventDefault();
-    const file = event.dataTransfer?.files[0];
-    console.log("file", file);
-    if (file && file.type === "image/svg+xml") {
-      handleFile(file);
-    }
-  }
-
-  function handleDragOver(event: DragEvent) {
-    console.log("drag over");
-    event.preventDefault();
-  }
-
-  function handleDragLeave(event: DragEvent) {
-    event.preventDefault();
-  }
-
-  function handleFile(file: File) {
-    // TODO: Add file processing logic here
-    console.log("File selected:", file.name);
-  }
-
-  function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      handleUploadClick();
-    }
-  }
-
-  $inspect(svgBgState);
 </script>
 
 <div class="space-y-8">
+  {#if isDragHovering}
+    <div
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div
+        class="bg-neutral-800 border-2 border-dashed border-purple-500 rounded-lg p-12 text-center"
+      >
+        <Upload class="w-16 h-16 text-purple-400 mx-auto mb-4" />
+        <h3 class="text-xl font-semibold text-purple-400 mb-2">
+          Drop SVG File Here
+        </h3>
+        <p class="text-neutral-300">Release to upload your SVG file</p>
+      </div>
+    </div>
+  {/if}
   <div>
     <h1 class="text-3xl font-bold text-neutral-100 mb-2">SVG Backgrounds</h1>
     <p class="text-neutral-400">Add custom backgrounds to your SVG graphics</p>
@@ -87,48 +146,25 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div>
       <h3 class="text-lg font-semibold text-neutral-100 mb-4">Preview</h3>
-      <div class="bg-neutral-800 p-6 rounded-lg border border-neutral-700">
+      <div
+        class=" p-6 rounded-lg border border-neutral-700 flex flex-col items-center justify-center"
+      >
         <div bind:this={svgDisplay}></div>
       </div>
     </div>
 
-    <div>
-      <h3 class="text-lg font-semibold text-neutral-100 mb-4">Upload SVG</h3>
-      <div class="space-y-4">
-        <div
-          class="border-2 border-dashed border-neutral-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors cursor-pointer"
-          ondrop={handleDrop}
-          ondragover={handleDragOver}
-          ondragleave={handleDragLeave}
-          onclick={handleUploadClick}
-          onkeydown={handleKeyDown}
-          role="button"
-          tabindex="0"
-        >
-          <Upload class="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-          <p class="text-neutral-300 mb-2">Drag & drop your SVG file here</p>
-          <p class="text-sm text-neutral-500">or click to browse</p>
-        </div>
-
-        <div class="flex items-center justify-center">
-          <span class="text-sm text-neutral-500">or</span>
-        </div>
-
-        <Button
-          onclick={handleUploadClick}
-          class="w-full bg-purple-600 hover:bg-purple-700 text-white"
+    <div class="flex flex-col items-center justify-center h-full">
+      <h3 class="text-lg font-semibold text-neutral-100 mb-4 text-center">
+        Upload SVG
+      </h3>
+      <div class="space-y-4 w-full flex flex-col items-center">
+        <label
+          class="w-full max-w-xs bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors"
         >
           <Upload class="w-4 h-4 mr-2" />
           Choose SVG File
-        </Button>
-
-        <input
-          type="file"
-          accept=".svg"
-          class="hidden"
-          bind:this={fileInput}
-          onchange={handleFileSelect}
-        />
+          <input type="file" accept=".svg,image/svg+xml" class="hidden" />
+        </label>
       </div>
     </div>
   </div>
