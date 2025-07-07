@@ -11,17 +11,18 @@
   import Button from "$lib/components/ui/button/button.svelte";
   import Slider from "$lib/components/ui/slider/slider.svelte";
   import Label from "$lib/components/ui/label/label.svelte";
+  import { invoke } from "@tauri-apps/api/core";
+  import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
   let svgDisplay: HTMLDivElement;
   let isDragHovering = $state(false);
 
   let bgColorHex = $state<string>("#ffffff");
   let borderRadius = $state<number>(75);
-  let aspectRatio = $state<"1:1" | "16:9">("1:1");
   let imageWidth = $state<number>(75);
   let svgElement = $state<SVGElement | null>(null);
 
-  const { setupSvg, updateSvg, setInnerSvg } = displaySvgD3();
+  const { setupSvg, updateSvg, setInnerSvg, getSvgString } = displaySvgD3();
 
   $effect(() => {
     setupSvg(svgDisplay);
@@ -37,7 +38,6 @@
     updateSvg({
       borderRadius: borderRadius,
       bgColorHex: bgColorHex,
-      aspectRatio: aspectRatio,
     });
   });
 
@@ -134,27 +134,25 @@
         </label>
       </div>
     </div>
+
+    <Button
+      type="button"
+      class="flex items-center px-3 space-x-2 border border-neutral-600 bg-neutral-800 text-white rounded-md h-full"
+      onclick={() => {
+        const svgString = getSvgString();
+        if (svgString) {
+          writeText(svgString);
+        }
+      }}
+    >
+      Copy to Clipboard
+    </Button>
   </div>
 
   <div class="bg-neutral-800 p-6 rounded-lg shadow border border-neutral-700">
     <h3 class="text-lg font-semibold text-neutral-100 mb-4">Customization</h3>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <Label
-          class="block text-sm font-medium text-neutral-300 mb-2"
-          for="aspect-ratio">Aspect Ratio</Label
-        >
-        <div class="flex space-x-2">
-          <Button type="button" onclick={() => (aspectRatio = "16:9")}
-            >16:9</Button
-          >
-          <Button type="button" onclick={() => (aspectRatio = "1:1")}
-            >1:1</Button
-          >
-        </div>
-      </div>
-
       <div>
         <Label
           class="block text-sm font-medium text-neutral-300 mb-2"

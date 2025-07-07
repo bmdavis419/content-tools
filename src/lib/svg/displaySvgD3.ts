@@ -10,6 +10,16 @@ export const displaySvgD3 = () => {
   let path: d3.Selection<SVGPathElement, unknown, null, unknown>;
   let innerSvg: d3.Selection<SVGGElement, unknown, null, unknown>;
 
+  const getSvgString = () => {
+    const svgElement = svg.node();
+
+    if (!svgElement) return null;
+
+    const svgString = svgElement.outerHTML;
+
+    return svgString;
+  };
+
   const setupSvg = (selector: HTMLDivElement) => {
     d3.select(selector).selectAll("*").remove();
 
@@ -34,24 +44,12 @@ export const displaySvgD3 = () => {
       .attr("fill", defaultBgColorHex);
   };
 
-  const updateSvg = (data: {
-    borderRadius: number;
-    bgColorHex: string;
-    aspectRatio: "1:1" | "16:9";
-  }) => {
-    const { borderRadius, bgColorHex, aspectRatio } = data;
-
-    let width = size;
-    let height = size;
-
-    if (aspectRatio === "16:9") {
-      width = (size * 16) / 9;
-      height = size;
-    }
+  const updateSvg = (data: { borderRadius: number; bgColorHex: string }) => {
+    const { borderRadius, bgColorHex } = data;
 
     const svgPath = getSvgPath({
-      width: width,
-      height: height,
+      width: size,
+      height: size,
       cornerRadius: borderRadius,
       cornerSmoothing: 0.8,
       preserveSmoothing: true,
@@ -149,5 +147,6 @@ export const displaySvgD3 = () => {
     setupSvg,
     updateSvg,
     setInnerSvg,
+    getSvgString,
   };
 };
