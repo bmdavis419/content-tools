@@ -104,19 +104,19 @@
     <div>
       <h3 class="text-lg font-semibold text-neutral-100 mb-4">Preview</h3>
       <div
-        class=" p-6 rounded-lg border border-neutral-700 flex flex-col items-center justify-center"
+        class="p-6 rounded-lg border border-neutral-700 flex flex-col items-center justify-center min-h-[300px]"
       >
         <div bind:this={svgDisplay}></div>
       </div>
     </div>
 
-    <div class="flex flex-col items-center justify-center h-full">
+    <div class="flex flex-col items-center justify-center h-full space-y-4">
       <h3 class="text-lg font-semibold text-neutral-100 mb-4 text-center">
-        Upload SVG
+        Upload & Export
       </h3>
-      <div class="space-y-4 w-full flex flex-col items-center">
+      <div class="space-y-3 w-full max-w-sm">
         <label
-          class="w-full max-w-xs bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors"
+          class="w-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center px-4 py-3 rounded cursor-pointer transition-colors"
         >
           <Upload class="w-4 h-4 mr-2" />
           Choose SVG File
@@ -132,21 +132,23 @@
             }}
           />
         </label>
+        <p class="text-neutral-400 text-sm text-center">
+          Or paste an SVG (Ctrl/Cmd + V) or drag & drop a file
+        </p>
+        <Button
+          type="button"
+          class="w-full flex items-center justify-center px-4 py-3 border border-neutral-600 bg-neutral-800 text-white rounded-md hover:bg-neutral-700 transition-colors"
+          onclick={() => {
+            const svgString = getSvgString();
+            if (svgString) {
+              writeText(svgString);
+            }
+          }}
+        >
+          Copy to Clipboard
+        </Button>
       </div>
     </div>
-
-    <Button
-      type="button"
-      class="flex items-center px-3 space-x-2 border border-neutral-600 bg-neutral-800 text-white rounded-md h-full"
-      onclick={() => {
-        const svgString = getSvgString();
-        if (svgString) {
-          writeText(svgString);
-        }
-      }}
-    >
-      Copy to Clipboard
-    </Button>
   </div>
 
   <div class="bg-neutral-800 p-6 rounded-lg shadow border border-neutral-700">
@@ -161,7 +163,7 @@
         <div class="flex space-x-2 w-full items-center">
           <div
             class="rounded-md border border-gray-300 px-2 py-1 dark:border-gray-600 flex items-center"
-            style="height: 100%"
+            style="height: 100% "
           >
             <ColorPicker bind:hex={bgColorHex} position="responsive" />
           </div>
@@ -230,39 +232,7 @@
       </div>
     </div>
   </div>
-
-  <div class="bg-amber-950 p-6 rounded-lg border border-amber-800">
-    <h3 class="text-lg font-semibold text-amber-200 mb-2">Coming Soon</h3>
-    <p class="text-amber-300">
-      This feature is currently in development. We're building a comprehensive
-      background editor with gradients, patterns, and advanced customization
-      options.
-    </p>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="bg-neutral-800 p-6 rounded-lg shadow border border-neutral-700">
-      <h3 class="text-lg font-semibold text-neutral-100 mb-3">
-        Background Types
-      </h3>
-      <ul class="space-y-2 text-neutral-300">
-        <li>• Solid colors with opacity control</li>
-        <li>• Linear and radial gradients</li>
-        <li>• Pattern backgrounds</li>
-        <li>• Image backgrounds</li>
-      </ul>
-    </div>
-
-    <div class="bg-neutral-800 p-6 rounded-lg shadow border border-neutral-700">
-      <h3 class="text-lg font-semibold text-neutral-100 mb-3">
-        Export Options
-      </h3>
-      <ul class="space-y-2 text-neutral-300">
-        <li>• SVG with embedded background</li>
-        <li>• PNG with transparency</li>
-        <li>• JPG for web use</li>
-        <li>• PDF for print</li>
-      </ul>
-    </div>
-  </div>
 </div>
+
+<style>
+</style>
