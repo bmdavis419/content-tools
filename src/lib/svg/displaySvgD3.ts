@@ -1,130 +1,153 @@
-import * as d3 from 'd3';
-import { getSvgPath } from 'figma-squircle';
+import * as d3 from "d3";
+import { getSvgPath } from "figma-squircle";
 
 export const displaySvgD3 = () => {
-	const size = 400;
-	const defaultBorderRadius = 100;
-	const defaultBgColorHex = '#000000';
+  const size = 400;
+  const defaultBorderRadius = 100;
+  const defaultBgColorHex = "#000000";
 
-	let svg: d3.Selection<SVGSVGElement, unknown, null, unknown>;
-	let path: d3.Selection<SVGPathElement, unknown, null, unknown>;
-	let innerSvg: d3.Selection<SVGGElement, unknown, null, unknown>;
+  let svg: d3.Selection<SVGSVGElement, unknown, null, unknown>;
+  let path: d3.Selection<SVGPathElement, unknown, null, unknown>;
+  let innerSvg: d3.Selection<SVGGElement, unknown, null, unknown>;
 
-	const setupSvg = (selector: HTMLDivElement) => {
-		d3.select(selector).selectAll('*').remove();
+  const setupSvg = (selector: HTMLDivElement) => {
+    d3.select(selector).selectAll("*").remove();
 
-		svg = d3
-			.select(selector)
-			.append('svg')
-			.attr('width', size)
-			.attr('height', size)
-			.attr('viewBox', `0 0 ${size} ${size}`);
+    svg = d3
+      .select(selector)
+      .append("svg")
+      .attr("width", size)
+      .attr("height", size)
+      .attr("viewBox", `0 0 ${size} ${size}`);
 
-		const svgPath = getSvgPath({
-			width: size,
-			height: size,
-			cornerRadius: defaultBorderRadius,
-			cornerSmoothing: 0.8,
-			preserveSmoothing: true
-		});
+    const svgPath = getSvgPath({
+      width: size,
+      height: size,
+      cornerRadius: defaultBorderRadius,
+      cornerSmoothing: 0.8,
+      preserveSmoothing: true,
+    });
 
-		path = svg.append('path').attr('d', svgPath).attr('fill', defaultBgColorHex);
-	};
+    path = svg
+      .append("path")
+      .attr("d", svgPath)
+      .attr("fill", defaultBgColorHex);
+  };
 
-	const updateSvg = (data: { borderRadius: number; bgColorHex: string }) => {
-		const { borderRadius, bgColorHex } = data;
+  const updateSvg = (data: {
+    borderRadius: number;
+    bgColorHex: string;
+    aspectRatio: "1:1" | "16:9";
+  }) => {
+    const { borderRadius, bgColorHex, aspectRatio } = data;
 
-		const svgPath = getSvgPath({
-			width: size,
-			height: size,
-			cornerRadius: borderRadius,
-			cornerSmoothing: 0.8,
-			preserveSmoothing: true
-		});
+    let width = size;
+    let height = size;
 
-		path.attr('d', svgPath).attr('fill', bgColorHex);
-	};
+    if (aspectRatio === "16:9") {
+      width = (size * 16) / 9;
+      height = size;
+    }
 
-	const setInnerSvg = (data: { svgElement: SVGElement; imageWidth: number }) => {
-		const { svgElement, imageWidth } = data;
+    const svgPath = getSvgPath({
+      width: width,
+      height: height,
+      cornerRadius: borderRadius,
+      cornerSmoothing: 0.8,
+      preserveSmoothing: true,
+    });
 
-		// Clear any existing SVG content
-		svg.selectAll('g').remove();
+    path.attr("d", svgPath).attr("fill", bgColorHex);
+  };
 
-		// Extract viewBox values from the SVG
-		const svgViewBox = svgElement.getAttribute('viewBox')?.split(/\s+/).map(Number);
+  const setInnerSvg = (data: {
+    svgElement: SVGElement;
+    imageWidth: number;
+  }) => {
+    const { svgElement, imageWidth } = data;
 
-		// Get the original dimensions, prioritizing viewBox over getBoundingClientRect
-		const viewBoxWidth = svgViewBox?.[2] || 0;
-		const viewBoxHeight = svgViewBox?.[3] || 0;
-		const viewBoxMinX = svgViewBox?.[0] || 0;
-		const viewBoxMinY = svgViewBox?.[1] || 0;
+    // Clear any existing SVG content
+    svg.selectAll("g").remove();
 
-		// Fallback to getBoundingClientRect if viewBox is not available or invalid
-		const originalWidth = viewBoxWidth || svgElement.getBoundingClientRect().width || 100;
-		const originalHeight = viewBoxHeight || svgElement.getBoundingClientRect().height || 100;
+    // Extract viewBox values from the SVG
+    const svgViewBox = svgElement
+      .getAttribute("viewBox")
+      ?.split(/\s+/)
+      .map(Number);
 
-		// Calculate scale factor based on image width percentage
-		const scaleFactor = imageWidth / 100;
+    // Get the original dimensions, prioritizing viewBox over getBoundingClientRect
+    const viewBoxWidth = svgViewBox?.[2] || 0;
+    const viewBoxHeight = svgViewBox?.[3] || 0;
+    const viewBoxMinX = svgViewBox?.[0] || 0;
+    const viewBoxMinY = svgViewBox?.[1] || 0;
 
-		// Calculate the aspect ratio
-		const aspectRatio = originalWidth / originalHeight;
+    // Fallback to getBoundingClientRect if viewBox is not available or invalid
+    const originalWidth =
+      viewBoxWidth || svgElement.getBoundingClientRect().width || 100;
+    const originalHeight =
+      viewBoxHeight || svgElement.getBoundingClientRect().height || 100;
 
-		// Determine the appropriate scale to maintain aspect ratio
-		// and fit within the container while respecting the imageWidth setting
-		let scaleX, scaleY;
+    // Calculate scale factor based on image width percentage
+    const scaleFactor = imageWidth / 100;
 
-		if (aspectRatio >= 1) {
-			// Wider than tall
-			scaleX = (size * scaleFactor) / originalWidth;
-			scaleY = scaleX; // Maintain aspect ratio
-		} else {
-			// Taller than wide
-			scaleY = (size * scaleFactor) / originalHeight;
-			scaleX = scaleY; // Maintain aspect ratio
-		}
+    // Calculate the aspect ratio
+    const aspectRatio = originalWidth / originalHeight;
 
-		// Calculate the scaled dimensions
-		const scaledWidth = originalWidth * scaleX;
-		const scaledHeight = originalHeight * scaleY;
+    // Determine the appropriate scale to maintain aspect ratio
+    // and fit within the container while respecting the imageWidth setting
+    let scaleX, scaleY;
 
-		// Center the SVG in the background
-		const xOffset = (size - scaledWidth) / 2;
-		const yOffset = (size - scaledHeight) / 2;
+    if (aspectRatio >= 1) {
+      // Wider than tall
+      scaleX = (size * scaleFactor) / originalWidth;
+      scaleY = scaleX; // Maintain aspect ratio
+    } else {
+      // Taller than wide
+      scaleY = (size * scaleFactor) / originalHeight;
+      scaleX = scaleY; // Maintain aspect ratio
+    }
 
-		// Create a new group element for the inner SVG
-		innerSvg = svg.append('g');
+    // Calculate the scaled dimensions
+    const scaledWidth = originalWidth * scaleX;
+    const scaledHeight = originalHeight * scaleY;
 
-		// Clone the SVG content to avoid modifying the original
-		const svgContent = svgElement.cloneNode(true) as SVGElement;
+    // Center the SVG in the background
+    const xOffset = (size - scaledWidth) / 2;
+    const yOffset = (size - scaledHeight) / 2;
 
-		// Remove any existing transform, width, height attributes that might interfere
-		svgContent.removeAttribute('transform');
-		svgContent.removeAttribute('width');
-		svgContent.removeAttribute('height');
+    // Create a new group element for the inner SVG
+    innerSvg = svg.append("g");
 
-		// Extract all child nodes from the SVG
-		const childNodes = Array.from(svgContent.childNodes);
+    // Clone the SVG content to avoid modifying the original
+    const svgContent = svgElement.cloneNode(true) as SVGElement;
 
-		// Create a group with proper transformation
-		const contentGroup = innerSvg
-			.append('g')
-			.attr(
-				'transform',
-				`translate(${xOffset - viewBoxMinX * scaleX}, ${yOffset - viewBoxMinY * scaleY}) scale(${scaleX}, ${scaleY})`
-			);
+    // Remove any existing transform, width, height attributes that might interfere
+    svgContent.removeAttribute("transform");
+    svgContent.removeAttribute("width");
+    svgContent.removeAttribute("height");
 
-		// Append each child node to our new group
-		childNodes.forEach((node) => {
-			if (node.nodeType === Node.ELEMENT_NODE) {
-				contentGroup.node()?.appendChild(node.cloneNode(true));
-			}
-		});
-	};
+    // Extract all child nodes from the SVG
+    const childNodes = Array.from(svgContent.childNodes);
 
-	return {
-		setupSvg,
-		updateSvg,
-		setInnerSvg
-	};
+    // Create a group with proper transformation
+    const contentGroup = innerSvg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${xOffset - viewBoxMinX * scaleX}, ${yOffset - viewBoxMinY * scaleY}) scale(${scaleX}, ${scaleY})`
+      );
+
+    // Append each child node to our new group
+    childNodes.forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        contentGroup.node()?.appendChild(node.cloneNode(true));
+      }
+    });
+  };
+
+  return {
+    setupSvg,
+    updateSvg,
+    setInnerSvg,
+  };
 };

@@ -15,8 +15,9 @@
   let svgDisplay: HTMLDivElement;
   let isDragHovering = $state(false);
 
-  let bgColorHex = $state<string>("#000000");
-  let borderRadius = $state<number>(100);
+  let bgColorHex = $state<string>("#ffffff");
+  let borderRadius = $state<number>(75);
+  let aspectRatio = $state<"1:1" | "16:9">("1:1");
   let imageWidth = $state<number>(75);
   let svgElement = $state<SVGElement | null>(null);
 
@@ -30,6 +31,14 @@
     if (svgElement) {
       setInnerSvg({ svgElement: svgElement, imageWidth: imageWidth });
     }
+  });
+
+  $effect(() => {
+    updateSvg({
+      borderRadius: borderRadius,
+      bgColorHex: bgColorHex,
+      aspectRatio: aspectRatio,
+    });
   });
 
   // paste in svg
@@ -137,9 +146,12 @@
           for="aspect-ratio">Aspect Ratio</Label
         >
         <div class="flex space-x-2">
-          <Button type="button">16:9</Button>
-          <Button type="button">1:1</Button>
-          <Button type="button">9:16</Button>
+          <Button type="button" onclick={() => (aspectRatio = "16:9")}
+            >16:9</Button
+          >
+          <Button type="button" onclick={() => (aspectRatio = "1:1")}
+            >1:1</Button
+          >
         </div>
       </div>
 
@@ -159,6 +171,7 @@
             type="button"
             class="flex items-center px-3 space-x-2 border border-neutral-600 bg-neutral-800 text-white rounded-md"
             style="height: 100%"
+            onclick={() => (bgColorHex = "#000000")}
           >
             <span
               class="inline-block w-4 h-4 rounded-full bg-black border border-neutral-400 mr-2"
@@ -169,6 +182,7 @@
             type="button"
             class="flex items-center px-3 space-x-2 border border-neutral-600 bg-neutral-800 text-white rounded-md h-full"
             style="height: 100%"
+            onclick={() => (bgColorHex = "#ffffff")}
           >
             <span
               class="inline-block w-4 h-4 rounded-full bg-white border border-neutral-400 mr-2"
@@ -187,14 +201,14 @@
           type="single"
           step={1}
           min={0}
-          max={100}
-          value={20}
+          max={200}
+          bind:value={borderRadius}
           id="corner-radius-slider"
           class=""
         />
         <div class="flex justify-between text-xs text-neutral-400 mt-1">
           <span>0px</span>
-          <span>100px</span>
+          <span>200px</span>
         </div>
       </div>
 
@@ -206,14 +220,14 @@
         <Slider
           type="single"
           min={10}
-          max={200}
-          value={100}
+          max={100}
+          bind:value={imageWidth}
           id="svg-scaling-slider"
           class="w-full"
         />
         <div class="flex justify-between text-xs text-neutral-400 mt-1">
           <span>10%</span>
-          <span>200%</span>
+          <span>100%</span>
         </div>
       </div>
     </div>
