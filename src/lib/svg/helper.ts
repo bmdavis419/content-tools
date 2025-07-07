@@ -20,12 +20,12 @@ export const getSvgFromPaths = async (paths: string[]) => {
   // this will escape on the first found path
 
   for (const path of paths) {
-    // toast.error("Sorry this is not implemented yet", {
-    //   description: `path: ${path}`,
-    // });
-    const file = await readFile(path);
+    toast.error("Sorry this is not implemented yet", {
+      description: `path: ${path}`,
+    });
+    // const file = await readFile(path);
 
-    console.log(file);
+    // console.log(file);
   }
 };
 
