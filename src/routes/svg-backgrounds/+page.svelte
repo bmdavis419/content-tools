@@ -3,7 +3,11 @@
   import { Upload } from "@lucide/svelte";
   import { displaySvgD3 } from "$lib/svg/displaySvgD3";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
-  import { getSvgFromClipboard, getSvgFromFileUpload } from "$lib/svg/helper";
+  import {
+    getSvgFromClipboard,
+    getSvgFromFileUpload,
+    getSvgFromPaths,
+  } from "$lib/svg/helper";
   import Button from "$lib/components/ui/button/button.svelte";
   import Slider from "$lib/components/ui/slider/slider.svelte";
   import Label from "$lib/components/ui/label/label.svelte";
@@ -53,6 +57,7 @@
       } else if (event.payload.type === "drop") {
         isDragHovering = false;
         console.log("User dropped", event.payload.paths);
+        getSvgFromPaths(event.payload.paths);
       } else {
         isDragHovering = false;
         console.log("File drop cancelled");

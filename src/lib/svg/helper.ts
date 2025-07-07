@@ -1,3 +1,5 @@
+import { readFile } from "@tauri-apps/plugin-fs";
+
 const parseSvgContent = (svgContent: string) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgContent, "image/svg+xml");
@@ -11,6 +13,16 @@ export const getSvgFromFileUpload = async (event: Event) => {
 
   const text = await file.text();
   return parseSvgContent(text);
+};
+
+export const getSvgFromPaths = async (paths: string[]) => {
+  // this will escape on the first found path
+
+  for (const path of paths) {
+    const file = await readFile(path);
+
+    console.log(file);
+  }
 };
 
 export const getSvgFromClipboard = async (event: ClipboardEvent) => {
