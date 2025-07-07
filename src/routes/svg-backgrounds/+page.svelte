@@ -1,7 +1,12 @@
 <script lang="ts">
-  import { Upload, Layers } from "@lucide/svelte";
+  import ColorPicker from "svelte-awesome-color-picker";
+  import { Upload } from "@lucide/svelte";
   import { displaySvgD3 } from "$lib/svg/displaySvgD3";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
+  import { getSvgFromClipboard, getSvgFromFileUpload } from "$lib/svg/helper";
+  import Button from "$lib/components/ui/button/button.svelte";
+  import Slider from "$lib/components/ui/slider/slider.svelte";
+  import Label from "$lib/components/ui/label/label.svelte";
 
   let svgDisplay: HTMLDivElement;
   let isDragHovering = $state(false);
@@ -12,12 +17,6 @@
   let svgElement = $state<SVGElement | null>(null);
 
   const { setupSvg, updateSvg, setInnerSvg } = displaySvgD3();
-
-  const parseSvgContent = (svgContent: string) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(svgContent, "image/svg+xml");
-    return doc.documentElement as unknown as SVGElement;
-  };
 
   $effect(() => {
     setupSvg(svgDisplay);
@@ -32,65 +31,9 @@
   // paste in svg
   $effect(() => {
     const handlePaste = async (event: ClipboardEvent) => {
-      const clipboardData = event.clipboardData;
-      if (!clipboardData) return;
-
-      // First try to get SVG directly
-      if (clipboardData.types.includes("image/svg+xml")) {
-        try {
-          const svgData = clipboardData.getData("image/svg+xml");
-          if (svgData) {
-            svgElement = parseSvgContent(svgData);
-            return;
-          }
-        } catch (error) {
-          console.error("Error getting SVG data:", error);
-        }
-      }
-
-      // Try to get SVG from clipboard items
-      const items = clipboardData.items;
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-
-        // Check for SVG file or image
-        if (item.type === "image/svg+xml") {
-          const blob = item.getAsFile();
-          if (blob) {
-            // Parse SVG content
-            const text = await blob.text();
-            svgElement = parseSvgContent(text);
-            return;
-          }
-        }
-      }
-
-      // Check for SVG text content
-      const text = clipboardData.getData("text/plain");
-      if (text) {
-        const trimmedText = text.trim();
-
-        if (trimmedText.startsWith("<svg") && trimmedText.includes("</svg>")) {
-          svgElement = parseSvgContent(text);
-          return;
-        }
-
-        // Check if the text is a URL to an SVG file
-        if (trimmedText.match(/^https?:\/\/.*\.svg$/i)) {
-          try {
-            const response = await fetch(trimmedText);
-            if (response.ok) {
-              const svgText = await response.text();
-              if (svgText.trim().startsWith("<svg")) {
-                svgElement = parseSvgContent(svgText);
-                return;
-              }
-            }
-          } catch (error) {
-            console.error("Error fetching SVG from URL:", error);
-          }
-        }
+      const svg = await getSvgFromClipboard(event);
+      if (svg) {
+        svgElement = svg;
       }
     };
 
@@ -163,51 +106,18 @@
         >
           <Upload class="w-4 h-4 mr-2" />
           Choose SVG File
-          <input type="file" accept=".svg,image/svg+xml" class="hidden" />
+          <input
+            type="file"
+            accept=".svg,image/svg+xml"
+            class="hidden"
+            onchange={async (e) => {
+              const svg = await getSvgFromFileUpload(e);
+              if (svg) {
+                svgElement = svg;
+              }
+            }}
+          />
         </label>
-      </div>
-    </div>
-  </div>
-
-  <div class="bg-neutral-800 p-6 rounded-lg shadow border border-neutral-700">
-    <div class="flex items-center mb-4">
-      <Layers class="w-6 h-6 text-neutral-300 mr-3" />
-      <h3 class="text-lg font-semibold text-neutral-100">Background Options</h3>
-    </div>
-
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div
-        class="p-4 border-2 border-neutral-600 rounded-lg hover:border-purple-500 cursor-pointer transition-colors"
-      >
-        <div
-          class="w-full h-16 bg-gradient-to-br from-blue-400 to-purple-600 rounded mb-2"
-        ></div>
-        <p class="text-sm text-center text-neutral-300">Gradient</p>
-      </div>
-
-      <div
-        class="p-4 border-2 border-neutral-600 rounded-lg hover:border-purple-500 cursor-pointer transition-colors"
-      >
-        <div
-          class="w-full h-16 bg-neutral-100 rounded mb-2 border border-neutral-500"
-        ></div>
-        <p class="text-sm text-center text-neutral-300">Solid Color</p>
-      </div>
-
-      <div
-        class="p-4 border-2 border-neutral-600 rounded-lg hover:border-purple-500 cursor-pointer transition-colors"
-      >
-        <div class="w-full h-16 bg-neutral-700 rounded mb-2 opacity-50"></div>
-        <p class="text-sm text-center text-neutral-300">Transparent</p>
-      </div>
-
-      <div
-        class="p-4 border-2 border-neutral-600 rounded-lg hover:border-purple-500 cursor-pointer transition-colors"
-      >
-        <div
-          class="w-full h-16 bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 rounded mb-2"
-        ></div>
-        <p class="text-sm text-center text-neutral-300">Pattern</p>
       </div>
     </div>
   </div>
@@ -217,43 +127,88 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <label
+        <Label
           class="block text-sm font-medium text-neutral-300 mb-2"
-          for="bg-color-picker">Background Color</label
+          for="aspect-ratio">Aspect Ratio</Label
         >
         <div class="flex space-x-2">
-          <input
-            id="bg-color-picker"
-            type="color"
-            value="#ffffff"
-            class="w-12 h-10 border border-neutral-600 rounded cursor-pointer"
-          />
-          <input
-            id="bg-color-text"
-            type="text"
-            value="#ffffff"
-            placeholder="#ffffff"
-            class="flex-1 px-3 py-2 border border-neutral-600 bg-neutral-700 text-neutral-100 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+          <Button type="button">16:9</Button>
+          <Button type="button">1:1</Button>
+          <Button type="button">9:16</Button>
         </div>
       </div>
 
       <div>
-        <label
+        <Label
           class="block text-sm font-medium text-neutral-300 mb-2"
-          for="padding-slider">Padding</label
+          for="bg-color-picker">Background Color</Label
         >
-        <input
-          id="padding-slider"
-          type="range"
-          min="0"
-          max="100"
-          value="20"
-          class="w-full h-2 bg-neutral-600 rounded-lg appearance-none cursor-pointer"
+        <div class="flex space-x-2 w-full items-center">
+          <div
+            class="rounded-md border border-gray-300 px-2 py-1 dark:border-gray-600 flex items-center"
+            style="height: 100%"
+          >
+            <ColorPicker bind:hex={bgColorHex} position="responsive" />
+          </div>
+          <Button
+            type="button"
+            class="flex items-center px-3 space-x-2 border border-neutral-600 bg-neutral-800 text-white rounded-md"
+            style="height: 100%"
+          >
+            <span
+              class="inline-block w-4 h-4 rounded-full bg-black border border-neutral-400 mr-2"
+            ></span>
+            Black
+          </Button>
+          <Button
+            type="button"
+            class="flex items-center px-3 space-x-2 border border-neutral-600 bg-neutral-800 text-white rounded-md h-full"
+            style="height: 100%"
+          >
+            <span
+              class="inline-block w-4 h-4 rounded-full bg-white border border-neutral-400 mr-2"
+            ></span>
+            White
+          </Button>
+        </div>
+      </div>
+
+      <div>
+        <Label
+          class="block text-sm font-medium text-neutral-300 mb-2"
+          for="corner-radius-slider">Corner Radius</Label
+        >
+        <Slider
+          type="single"
+          step={1}
+          min={0}
+          max={100}
+          value={20}
+          id="corner-radius-slider"
+          class=""
         />
         <div class="flex justify-between text-xs text-neutral-400 mt-1">
           <span>0px</span>
           <span>100px</span>
+        </div>
+      </div>
+
+      <div>
+        <Label
+          class="block text-sm font-medium text-neutral-300 mb-2"
+          for="svg-scaling-slider">SVG Scaling</Label
+        >
+        <Slider
+          type="single"
+          min={10}
+          max={200}
+          value={100}
+          id="svg-scaling-slider"
+          class="w-full"
+        />
+        <div class="flex justify-between text-xs text-neutral-400 mt-1">
+          <span>10%</span>
+          <span>200%</span>
         </div>
       </div>
     </div>
