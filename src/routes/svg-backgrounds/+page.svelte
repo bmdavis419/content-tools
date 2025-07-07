@@ -11,7 +11,6 @@
   import Button from "$lib/components/ui/button/button.svelte";
   import Slider from "$lib/components/ui/slider/slider.svelte";
   import Label from "$lib/components/ui/label/label.svelte";
-  import { invoke } from "@tauri-apps/api/core";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
   let svgDisplay: HTMLDivElement;
@@ -66,7 +65,11 @@
       } else if (event.payload.type === "drop") {
         isDragHovering = false;
         console.log("User dropped", event.payload.paths);
-        getSvgFromPaths(event.payload.paths);
+        getSvgFromPaths(event.payload.paths).then((svg) => {
+          if (svg) {
+            svgElement = svg;
+          }
+        });
       } else {
         isDragHovering = false;
         console.log("File drop cancelled");

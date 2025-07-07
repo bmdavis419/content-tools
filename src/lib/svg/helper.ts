@@ -1,4 +1,4 @@
-import { readFile } from "@tauri-apps/plugin-fs";
+import { readFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { toast } from "svelte-sonner";
 
 const parseSvgContent = (svgContent: string) => {
@@ -17,16 +17,20 @@ export const getSvgFromFileUpload = async (event: Event) => {
 };
 
 export const getSvgFromPaths = async (paths: string[]) => {
-  // this will escape on the first found path
-
+  let svgString = "";
   for (const path of paths) {
-    toast.error("Sorry this is not implemented yet", {
-      description: `path: ${path}`,
-    });
-    // const file = await readFile(path);
+    if (!path.endsWith(".svg")) continue;
 
-    // console.log(file);
+    const file = await readTextFile(path);
+
+    svgString = file;
+
+    break;
   }
+
+  if (!svgString) return null;
+
+  return parseSvgContent(svgString);
 };
 
 export const getSvgFromClipboard = async (event: ClipboardEvent) => {
