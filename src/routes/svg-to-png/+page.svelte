@@ -8,6 +8,8 @@
     type ImageMetadata,
   } from "$lib/svg/converter.js";
   import ScaleSelector from "$lib/components/svg/ScaleSelector.svelte";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
+  import { getSvgFromPaths, getSvgFromClipboard } from "$lib/svg/helper";
 
   let isDragHovering = $state<boolean>(false);
   let svgContent = $state<string>("");
@@ -57,38 +59,51 @@
     customScale = 1;
   }
 
-  // Drag and drop handlers
-  function handleDragOver(event: DragEvent) {
-    event.preventDefault();
-    isDragHovering = true;
-  }
-
-  function handleDragLeave(event: DragEvent) {
-    event.preventDefault();
-    isDragHovering = false;
-  }
-
-  async function handleDrop(event: DragEvent) {
-    event.preventDefault();
-    isDragHovering = false;
-
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      if (file.type === "image/svg+xml" || file.name.endsWith(".svg")) {
-        await processFile(file);
+  // Drag and drop with Tauri
+  $effect(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent((event) => {
+      if (event.payload.type === "over") {
+        isDragHovering = true;
+        console.log("User is hovering", event.payload.position);
+      } else if (event.payload.type === "drop") {
+        isDragHovering = false;
+        console.log("User dropped", event.payload.paths);
+        getSvgFromPaths(event.payload.paths).then((svg) => {
+          if (svg) {
+            svgContent = new XMLSerializer().serializeToString(svg);
+            imageMetadata = extractSvgMetadata(svgContent);
+          }
+        });
+      } else {
+        isDragHovering = false;
+        console.log("File drop cancelled");
       }
-    }
-  }
+    });
+
+    return () => {
+      unlisten.then((unlisten) => unlisten());
+    };
+  });
+
+  // Paste SVG from clipboard
+  $effect(() => {
+    const handlePaste = async (event: ClipboardEvent) => {
+      const svg = await getSvgFromClipboard(event);
+      if (svg) {
+        svgContent = new XMLSerializer().serializeToString(svg);
+        imageMetadata = extractSvgMetadata(svgContent);
+      }
+    };
+
+    document.addEventListener("paste", handlePaste);
+
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  });
 </script>
 
-<div
-  class="space-y-8"
-  role="main"
-  ondragover={handleDragOver}
-  ondragleave={handleDragLeave}
-  ondrop={handleDrop}
->
+<div class="space-y-8" role="main">
   {#if isDragHovering}
     <div
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
