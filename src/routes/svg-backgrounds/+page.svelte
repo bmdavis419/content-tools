@@ -12,6 +12,8 @@
   import Slider from "$lib/components/ui/slider/slider.svelte";
   import Label from "$lib/components/ui/label/label.svelte";
   import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import { writeFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+  import { toast } from "svelte-sonner";
 
   let svgDisplay: HTMLDivElement;
   let isDragHovering = $state(false);
@@ -39,6 +41,32 @@
       bgColorHex: bgColorHex,
     });
   });
+
+  // Function to download SVG using Tauri
+  async function downloadSvg() {
+    const svgString = getSvgString();
+    if (!svgString) {
+      toast.error("No SVG to download");
+      return;
+    }
+
+    try {
+      // Convert string to Uint8Array for Tauri writeFile
+      const encoder = new TextEncoder();
+      const contents = encoder.encode(svgString);
+
+      const fileName = `svg-with-background-${Date.now()}.svg`;
+
+      await writeFile(fileName, contents, {
+        baseDir: BaseDirectory.Download,
+      });
+
+      toast.success(`SVG saved as ${fileName}`);
+    } catch (error) {
+      console.error("Failed to save SVG:", error);
+      toast.error("Failed to save SVG file");
+    }
+  }
 
   // paste in svg
   $effect(() => {
@@ -145,10 +173,21 @@
             const svgString = getSvgString();
             if (svgString) {
               writeText(svgString);
+              toast.success("SVG copied to clipboard!");
+            } else {
+              toast.error("No SVG to copy");
             }
           }}
         >
           Copy to Clipboard
+        </Button>
+        <Button
+          type="button"
+          class="w-full flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
+          onclick={downloadSvg}
+          disabled={!svgElement}
+        >
+          Download SVG
         </Button>
       </div>
     </div>
